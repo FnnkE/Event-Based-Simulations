@@ -1,6 +1,5 @@
 # Event-Based-Simulations
-
-d_  :  Data
-f_  :  Filter/Function
-g_  :  Graph
-i_  :  Image
+d_  :  Data  <br />
+f_  :  Filter/Function  <br />
+g_  :  Graph  <br />
+i_  :  Image  <br />
