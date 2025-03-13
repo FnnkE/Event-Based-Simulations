@@ -1,57 +1,70 @@
 import cv2 as cv
 import numpy as np
-import time
 
+def main():
+    # Setup default camera
+    cam = cv.VideoCapture(0)
+    frame_width = int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
 
-f = open("th-timings.txt", "w")
-
-# Open the default camera
-cam = cv.VideoCapture(0)
-
-# Get the default frame width and height
-frame_width = int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
-
-output = np.zeros((frame_height,frame_width,3), np.uint8)
-
-ret, frame = cam.read()
-
-frameG = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-# frameB = cv.blur(frameG,(5,5))
-frameB = cv.medianBlur(frameG,5)
-ret,frameTH = cv.threshold(frameB,127,255,cv.THRESH_BINARY)
-
-initial = frameTH
-
-while True:
-    start_time = time.perf_counter()
-
+    # Read a frame from the webcam 
     ret, frame = cam.read()
+    if not ret: 
+            print('Image not captured') 
+            return 1
 
+    # Produce intial threshold frame
     frameG = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     frameB = cv.medianBlur(frameG,5)
-    # frameB = cv.GaussianBlur(frameG, (5, 5), 0)
     ret,frameTH = cv.threshold(frameB,127,255,cv.THRESH_BINARY)
-
-    new = frameTH-initial 
-    old = initial-frameTH
-
-    for y in range(frame_height):
-        for x in range(frame_width):
-            output[y,x] = (old[y,x], 0, new[y,x])
-    
     initial = frameTH
-    # Display the captured frame
-    cv.imshow('Camera', output)
 
-    end_time = time.perf_counter()
-    elapsed_time = end_time - start_time
-    f.write(str(elapsed_time)+"\n")
+    # Initialize arrays
+    totalList = []
+    output = np.zeros((frame_height,frame_width,3), np.uint8)
 
-    # Press 'q' to exit the loop
-    if cv.waitKey(1) == ord('q'):
-        break
+    while True:
+        totalStartTime = cv.getTickCount()
 
-# Release the capture and writer objects
-cam.release()
-cv.destroyAllWindows()
+        # Read a frame from the webcam 
+        ret, frame = cam.read()
+        if not ret: 
+            print('Image not captured') 
+            break
+
+        # Produce new threshold frame
+        frameG = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        frameB = cv.medianBlur(frameG,5)
+        ret,frameTH = cv.threshold(frameB,127,255,cv.THRESH_BINARY)
+
+        # Calculate Event-Like simulation
+        new = cv.subtract(frameTH, initial)
+        old = cv.subtract(initial, frameTH)
+        output[:, :, 2] = old  
+        output[:, :, 0] = new 
+        
+        initial = frameTH.copy()
+
+        # Display Event-Like frame
+        cv.imshow('Camera', output)
+
+        # Calculate total elapsed time for frame
+        totalEndTime = cv.getTickCount()
+        totalList.append((totalEndTime-totalStartTime)/cv.getTickFrequency())
+        
+        # Press 'q' to exit the loop
+        if cv.waitKey(1) == ord('q'):
+            break
+
+    # Save timings per frame to file
+    f = open("d_improved-filter-th-timings.txt", "w")
+    for i in totalList:
+        f.write(str(i)+"\n")
+    f.close()
+
+    # Release the webcam and close the windows 
+    cam.release()
+    cv.destroyAllWindows()
+
+if __name__ == "__main__": 
+    main()
